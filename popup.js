@@ -20,10 +20,23 @@ document.getElementById('btnExtrair').addEventListener('click', async () => {
     func: () => {
       const perguntaDiv = document.querySelector('.question__description__text.article-text');
       let pergunta = 'Pergunta não encontrada';
+
       if (perguntaDiv) {
-        const paragrafos = perguntaDiv.querySelectorAll('p');
-        if (paragrafos.length >= 2) {
-          pergunta = paragrafos[1].textContent.trim();
+        // Procura pelo elemento que contém o texto real (span com style específico)
+        const spanPergunta = perguntaDiv.querySelector('span[style*="font-size:20px"][style*="color:black"]');
+        
+        // Se não encontrar pelo span, procura em qualquer elemento com texto relevante
+        if (spanPergunta) {
+          pergunta = spanPergunta.textContent.replace(/\u200B/g, '').trim();
+        } else {
+          // Fallback: Procura o primeiro elemento não vazio
+          const elementos = perguntaDiv.querySelectorAll('*');
+          for (const el of elementos) {
+            if (el.textContent.trim().length > 10) { // 10 caracteres como limite mínimo
+              pergunta = el.textContent.replace(/\u200B/g, '').trim();
+              break;
+            }
+          }
         }
       }
 
