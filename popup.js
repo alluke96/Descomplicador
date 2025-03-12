@@ -22,29 +22,15 @@ document.getElementById('btnExtrair').addEventListener('click', async () => {
       let pergunta = 'Pergunta não encontrada';
 
       if (perguntaDiv) {
-        // Seleciona TODOS os spans com estilo de questão (Arial 20px)
-        const spansPergunta = perguntaDiv.querySelectorAll('span[style*="font-family: Arial"][style*="font-size: 20px"]');
+        // Pega TODO o texto da div principal (incluindo filhos)
+        pergunta = perguntaDiv.textContent
+          .replace(/(\u200B|<!--.*?-->|StartFragment|EndFragment)/g, '') // Remove lixo
+          .replace(/\s+/g, ' ') // Remove múltiplos espaços
+          .trim();
         
-        // Filtra e concatena os textos relevantes
-        const textos = [];
-        spansPergunta.forEach(span => {
-          const texto = span.textContent.replace(/\u200B/g, '').trim();
-          if (texto.length > 0) {
-            textos.push(texto);
-          }
-        });
-        
-        pergunta = textos.join(' '); // Junta todos os trechos
-      }
-
-      // Se ainda não encontrou, fallback alternativo
-      if (pergunta === 'Pergunta não encontrada') {
-        const elementos = perguntaDiv.querySelectorAll('*');
-        for (const el of elementos) {
-          if (el.textContent.trim().length > 10) { // 10 caracteres como limite mínimo
-            pergunta = el.textContent.replace(/\u200B/g, '').trim();
-            break;
-          }
+        // Filtro final para textos válidos
+        if (pergunta === '' || pergunta.length < 10) {
+          pergunta = 'Pergunta não encontrada';
         }
       }
 
