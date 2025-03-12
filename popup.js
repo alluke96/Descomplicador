@@ -22,20 +22,28 @@ document.getElementById('btnExtrair').addEventListener('click', async () => {
       let pergunta = 'Pergunta não encontrada';
 
       if (perguntaDiv) {
-        // Procura pelo elemento que contém o texto real (span com style específico)
-        const spanPergunta = perguntaDiv.querySelector('span[style*="font-size:20px"][style*="color:black"]');
+        // Seleciona TODOS os spans com estilo de questão (Arial 20px)
+        const spansPergunta = perguntaDiv.querySelectorAll('span[style*="font-family: Arial"][style*="font-size: 20px"]');
         
-        // Se não encontrar pelo span, procura em qualquer elemento com texto relevante
-        if (spanPergunta) {
-          pergunta = spanPergunta.textContent.replace(/\u200B/g, '').trim();
-        } else {
-          // Fallback: Procura o primeiro elemento não vazio
-          const elementos = perguntaDiv.querySelectorAll('*');
-          for (const el of elementos) {
-            if (el.textContent.trim().length > 10) { // 10 caracteres como limite mínimo
-              pergunta = el.textContent.replace(/\u200B/g, '').trim();
-              break;
-            }
+        // Filtra e concatena os textos relevantes
+        const textos = [];
+        spansPergunta.forEach(span => {
+          const texto = span.textContent.replace(/\u200B/g, '').trim();
+          if (texto.length > 0) {
+            textos.push(texto);
+          }
+        });
+        
+        pergunta = textos.join(' '); // Junta todos os trechos
+      }
+
+      // Se ainda não encontrou, fallback alternativo
+      if (pergunta === 'Pergunta não encontrada') {
+        const elementos = perguntaDiv.querySelectorAll('*');
+        for (const el of elementos) {
+          if (el.textContent.trim().length > 10) { // 10 caracteres como limite mínimo
+            pergunta = el.textContent.replace(/\u200B/g, '').trim();
+            break;
           }
         }
       }
