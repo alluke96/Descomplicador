@@ -5,17 +5,19 @@ document.getElementById('btnExtrair').addEventListener('click', async () => {
   const respostaIA = document.getElementById('resposta-ia');
   const btn = document.getElementById('btnExtrair');
 
-  // Resetar elementos
+  // ============ COLE SUA API KEY AQUI ============
+  const GEMINI_API_KEY = 'SUA_API_KEY'; 
+  // Obtenha em: https://aistudio.google.com/app/apikey
+  // ===============================================
+
   btn.style.display = 'none';
   loading.style.display = 'flex';
   resultadoDiv.style.display = 'none';
   respostaIA.style.display = 'none';
 
-  // Extrair dados
   chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: () => {
-      // Extrair pergunta (segundo <p>)
       const perguntaDiv = document.querySelector('.question__description__text.article-text');
       let pergunta = 'Pergunta não encontrada';
       if (perguntaDiv) {
@@ -25,7 +27,6 @@ document.getElementById('btnExtrair').addEventListener('click', async () => {
         }
       }
 
-      // Extrair alternativas
       const alternativas = Array.from(
         document.querySelectorAll('.question__alternatives .question__alternative.p1')
       ).map((li, index) => {
@@ -38,28 +39,59 @@ document.getElementById('btnExtrair').addEventListener('click', async () => {
 
       return { pergunta, alternativas };
     }
-  }, ([result]) => {
-    // Processar resultado
-    if (result?.result) {
-      const { pergunta, alternativas } = result.result;
-      const textoFormatado = `PERGUNTA:\n${pergunta}\n\nALTERNATIVAS:\n${alternativas.join('\n')}`;
-      
+  }, async ([result]) => {
+    if (!result?.result) {
+      loading.style.display = 'none';
+      resultadoDiv.innerHTML = 'Erro ao extrair dados da questão';
+      return;
+    }
+
+    const { pergunta, alternativas } = result.result;
+    const textoFormatado = `PERGUNTA:\n${pergunta}\n\nALTERNATIVAS:\n${alternativas.join('\n')}`;
+    
+    try {
       // Copiar para área de transferência
-      navigator.clipboard.writeText(textoFormatado)
-        .then(() => {
-          resultadoDiv.innerHTML = `✅ Copiado para área de transferência!<br><br>
-            <small><strong>PERGUNTA:</strong><br>${pergunta}<br><br>
-            <strong>ALTERNATIVAS:</strong><br>${alternativas.join('<br>')}</small>`;
+      await navigator.clipboard.writeText(textoFormatado);
+      resultadoDiv.innerHTML = `✅ Copiado para área de transferência!<br><br>
+        <small><strong>PERGUNTA:</strong><br>${pergunta}<br><br>
+        <strong>ALTERNATIVAS:</strong><br>${alternativas.join('<br>')}</small>`;
+
+      // Chamar API do Gemini
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Analise esta questão e suas alternativas, e me de apenas a resposta correta, de forma prática e rápida, assinalando a alternativa logo no começo da sua resposta:\n\n${textoFormatado}`
+            }]
+          }]
         })
-        .catch(console.error);
+      });
+
+      const data = await response.json();
+      const resposta = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Resposta não encontrada';
+
+      function formatarResposta(texto) {
+        return texto
+          .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.*?)\*/g, '<em>$1</em>')
+          .replace(/(\d+\.|\-\s)/g, '<br>$1')
+          .replace(/\n/g, '<br>');
+      }
+      
+      respostaIA.innerHTML = `<strong>Resposta da IA:</strong><br>${formatarResposta(resposta)}`;
+      
+    } catch (error) {
+      respostaIA.innerHTML = 'Erro ao consultar a IA';
+      console.error(error);
+    } finally {
+      loading.style.display = 'none';
+      resultadoDiv.style.display = 'block';
+      respostaIA.style.display = 'block';
+      btn.style.display = 'block';
     }
   });
-
-  // Simular IA após 5 segundos
-  setTimeout(() => {
-    loading.style.display = 'none';
-    resultadoDiv.style.display = 'block';
-    respostaIA.style.display = 'block';
-    btn.style.display = 'block';
-  }, 5000);
 });
